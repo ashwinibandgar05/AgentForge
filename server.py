@@ -26,7 +26,7 @@ logs = []
 
 def call_groq(system: str, user: str) -> str:
     response = client.chat.completions.create(
-        model="llama-3.3-70b-versatile",
+        model="gemma2-9b-it",
         messages=[
             {"role": "system", "content": system},
             {"role": "user",   "content": user}

@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Multi-Agent AI System</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #f5f4f0;
+    --surface: #ffffff;
+    --border: rgba(0,0,0,0.1);
+    --text: #1a1a18;
+    --muted: #6b6b67;
+    --purple: #7f77dd;
+    --purple-bg: #eeedfe;
+    --purple-text: #3c3489;
+    --teal: #1d9e75;
+    --teal-bg: #e1f5ee;
+    --teal-text: #085041;
+    --coral: #d85a30;
+    --coral-bg: #faece7;
+    --coral-text: #712b13;
+    --amber: #ba7517;
+    --amber-bg: #faeeda;
+    --amber-text: #633806;
+    --radius: 12px;
+    --radius-sm: 8px;
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 2rem 1rem;
+  }
+
+  .container { max-width: 760px; margin: 0 auto; }
+
+  header { margin-bottom: 2rem; }
+  header h1 { font-size: 22px; font-weight: 500; margin-bottom: 4px; }
+  header p { font-size: 14px; color: var(--muted); }
+
+  .input-card {
+    background: var(--surface);
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.25rem;
+    margin-bottom: 1.5rem;
+  }
+
+  textarea {
+    width: 100%;
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 10px 12px;
+    font-size: 14px;
+    font-family: inherit;
+    color: var(--text);
+    background: var(--bg);
+    resize: vertical;
+    min-height: 80px;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  textarea:focus { border-color: var(--purple); }
+
+  .btn {
+    margin-top: 12px;
+    padding: 9px 20px;
+    background: var(--purple);
+    color: white;
+    border: none;
+    border-radius: var(--radius-sm);
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: opacity 0.15s;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .btn:hover { opacity: 0.88; }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .spinner {
+    width: 14px; height: 14px;
+    border: 2px solid rgba(255,255,255,0.4);
+    border-top-color: white;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    display: none;
+  }
+  .btn.loading .spinner { display: block; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .section { margin-bottom: 1.5rem; }
+  .section-title {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 10px;
+  }
+
+  .pipeline {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    background: var(--surface);
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1rem 1.25rem;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+  }
+
+  .agent-pill {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 12px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 500;
+    background: var(--bg);
+    border: 0.5px solid var(--border);
+    color: var(--muted);
+    transition: all 0.2s;
+  }
+  .agent-pill.active-planner  { background: var(--purple-bg); color: var(--purple-text); border-color: var(--purple); }
+  .agent-pill.active-executor { background: var(--teal-bg);   color: var(--teal-text);   border-color: var(--teal); }
+  .agent-pill.active-critic   { background: var(--amber-bg);  color: var(--amber-text);  border-color: var(--amber); }
+  .agent-pill.done            { background: var(--teal-bg);   color: var(--teal-text);   border-color: var(--teal); }
+
+  .dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; opacity: 0.6; }
+  .arrow { color: var(--border); font-size: 16px; }
+
+  .log-list { display: flex; flex-direction: column; gap: 8px; }
+
+  .log-item {
+    background: var(--surface);
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 10px 14px;
+    font-size: 13px;
+  }
+
+  .log-label {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 500;
+    padding: 2px 8px;
+    border-radius: 20px;
+    margin-bottom: 6px;
+  }
+  .label-planner  { background: var(--purple-bg); color: var(--purple-text); }
+  .label-executor { background: var(--teal-bg);   color: var(--teal-text); }
+  .label-critic   { background: var(--amber-bg);  color: var(--amber-text); }
+
+  .step-list { list-style: none; padding: 0; margin-top: 4px; }
+  .step-list li { padding: 2px 0; color: var(--muted); }
+  .step-list li::before { content: "→ "; color: var(--purple); }
+
+  .score-bar { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
+  .score-track { flex: 1; height: 4px; background: var(--bg); border-radius: 2px; overflow: hidden; }
+  .score-fill  { height: 100%; border-radius: 2px; background: var(--teal); transition: width 0.4s; }
+
+  .verdict-accept { color: var(--teal); font-weight: 500; }
+  .verdict-retry  { color: var(--coral); font-weight: 500; }
+
+  .output-card {
+    background: var(--surface);
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.25rem;
+  }
+  .output-text {
+    font-size: 14px;
+    line-height: 1.75;
+    color: var(--text);
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  .hr { border: none; border-top: 0.5px solid var(--border); margin: 12px 0; }
+
+  .stats-row {
+    display: flex;
+    gap: 12px;
+    margin-top: 12px;
+    flex-wrap: wrap;
+  }
+  .stat-chip {
+    font-size: 12px;
+    padding: 4px 10px;
+    border-radius: 20px;
+    background: var(--bg);
+    color: var(--muted);
+    border: 0.5px solid var(--border);
+  }
+
+  .empty {
+    text-align: center;
+    color: var(--muted);
+    font-size: 14px;
+    padding: 2rem 0;
+  }
+
+  #results { display: none; }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1>Multi-Agent AI System</h1>
+    <p>Planner → Executor → Critic · Powered by Groq + LLaMA 3.3</p>
+  </header>
+
+  <div class="input-card">
+    <textarea id="goal" placeholder="Enter your goal... e.g. Research the top 3 Python frameworks for REST APIs and compare their pros and cons"></textarea>
+    <button class="btn" id="runBtn" onclick="runAgent()">
+      <div class="spinner"></div>
+      <span id="btnText">Run agents</span>
+    </button>
+  </div>
+
+  <div class="pipeline">
+    <div class="agent-pill" id="pill-planner"><div class="dot"></div> Planner</div>
+    <span class="arrow">›</span>
+    <div class="agent-pill" id="pill-executor"><div class="dot"></div> Executor</div>
+    <span class="arrow">›</span>
+    <div class="agent-pill" id="pill-critic"><div class="dot"></div> Critic</div>
+  </div>
+
+  <div id="results">
+    <div class="section" id="log-section">
+      <div class="section-title">Agent logs</div>
+      <div class="log-list" id="log-list"></div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Final output</div>
+      <div class="output-card">
+        <div class="output-text" id="output-text"></div>
+        <div class="hr"></div>
+        <div class="stats-row" id="stats-row"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="empty" id="empty-state">Enter a goal above and click Run agents to start.</div>
+</div>
+
+<script>
+async function runAgent() {
+  const goal = document.getElementById('goal').value.trim();
+  if (!goal) { alert('Please enter a goal.'); return; }
+
+  const btn = document.getElementById('runBtn');
+  btn.disabled = true;
+  btn.classList.add('loading');
+  document.getElementById('btnText').textContent = 'Running...';
+
+  resetPills();
+  document.getElementById('results').style.display = 'none';
+  document.getElementById('empty-state').style.display = 'none';
+  document.getElementById('log-list').innerHTML = '';
+
+  try {
+    activatePill('planner');
+    const res = await fetch('/run', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ goal })
+    });
+
+    if (!res.ok) throw new Error(await res.text());
+    const data = await res.json();
+
+    renderLogs(data.logs);
+    document.getElementById('output-text').textContent = data.output;
+
+    const stats = document.getElementById('stats-row');
+    stats.innerHTML = `
+      <span class="stat-chip">Retries: ${data.retries}</span>
+      <span class="stat-chip">${data.critique.startsWith('ACCEPT') ? '✓ Accepted' : '↺ Retried'}</span>
+    `;
+
+    document.getElementById('results').style.display = 'block';
+    markAllDone();
+
+  } catch(e) {
+    alert('Error: ' + e.message);
+    document.getElementById('empty-state').style.display = 'block';
+    resetPills();
+  } finally {
+    btn.disabled = false;
+    btn.classList.remove('loading');
+    document.getElementById('btnText').textContent = 'Run agents';
+  }
+}
+
+function renderLogs(logs) {
+  const container = document.getElementById('log-list');
+  logs.forEach(log => {
+    const item = document.createElement('div');
+    item.className = 'log-item';
+
+    if (log.type === 'planner') {
+      activatePill('planner');
+      const steps = log.steps.map((s,i) => `<li>${i+1}. ${s}</li>`).join('');
+      item.innerHTML = `<span class="log-label label-planner">Planner</span>
+        <div>Created ${log.steps.length} steps:</div>
+        <ul class="step-list">${steps}</ul>`;
+
+    } else if (log.type === 'executor') {
+      activatePill('executor');
+      item.innerHTML = `<span class="log-label label-executor">Executor</span>
+        Running step ${log.step}: <em>${log.label}</em>`;
+
+    } else if (log.type === 'critic') {
+      activatePill('critic');
+      const pct = (log.score / 10) * 100;
+      const vClass = log.verdict === 'accept' ? 'verdict-accept' : 'verdict-retry';
+      item.innerHTML = `<span class="log-label label-critic">Critic</span>
+        <div class="score-bar">
+          <span style="font-size:12px;color:var(--muted)">Score</span>
+          <div class="score-track"><div class="score-fill" style="width:${pct}%"></div></div>
+          <span style="font-size:13px;font-weight:500">${log.score}/10</span>
+        </div>
+        <div style="margin-top:6px">Verdict: <span class="${vClass}">${log.verdict.toUpperCase()}</span> — ${log.reason}</div>`;
+    }
+
+    container.appendChild(item);
+  });
+}
+
+function activatePill(agent) {
+  ['planner','executor','critic'].forEach(a => {
+    const el = document.getElementById('pill-' + a);
+    el.className = 'agent-pill' + (a === agent ? ' active-' + a : '');
+  });
+}
+
+function markAllDone() {
+  ['planner','executor','critic'].forEach(a => {
+    document.getElementById('pill-' + a).className = 'agent-pill done';
+  });
+}
+
+function resetPills() {
+  ['planner','executor','critic'].forEach(a => {
+    document.getElementById('pill-' + a).className = 'agent-pill';
+  });
+}
+
+document.getElementById('goal').addEventListener('keydown', e => {
+  if (e.key === 'Enter' && e.ctrlKey) runAgent();
+});
+</script>
+</body>
+</html>
